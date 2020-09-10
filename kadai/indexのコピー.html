@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>myMemoPad</title>
+<script src="js/jquery-2.1.3.min.js"></script>
+<link rel="stylesheet" href="css/sample.css">
+</head>
+<body>
+<header>
+<h1>診察予約表</h1>
+</header>
+
+<div id="task">
+    <div id="inputerea">
+        <div id="title">
+            <p>次回診察日</p>
+            <textarea id="taskbox"></textarea>
+        </div>
+        <div id="products">
+            <p>時間</p>
+            <textarea id="responsible"></textarea>
+        </div>
+    </div>
+    <div id="sent">
+        <button id="input">記録する</button>
+    </div>
+</div>
+<div id="output">
+    <div id="outputarea">
+      <div id="projects">
+           <p>次回の診察日は下記になります<br>
+            時間はタップで書き換えが可能です</p>
+            <table id="inputprojects">
+            </table>
+        </div>
+        <div id="sent">
+            <button id="save">保存</button>
+            <button id="clear">全削除</button>
+        </div>
+    </div>
+ </div>
+
+<script>
+
+//1.Save クリックイベント
+$("#input").on('click',function(){
+    const value = $("#taskbox").val();//1 診察日の値を取得
+    const responsible  = $("#responsible").val();//2 時間の中の値を取得
+    const lng = $('#inputprojects tr').length;//3 リストのtable の行数を取得
+    const html = '<tr><th id=thname'+lng+'>'+value+'</th><td id=task'+lng+'class= "itemp">'+responsible+'</td><td><button id="gyou'+lng+'">削除</button></td></tr>';//4 買い物リストに追加するリスト用のHTML。ここで、1、2、3の変数が代入された状態のHTMLの変数を作る
+
+   $("#inputprojects").prepend(html);//tableの最初の行に、4を追加するメゾット
+   $("#taskbox,#responsible").val("");//記録ボタンをクリックしたら診察日時・時間のtextereaを空にする処理
+   $('#inputprojects #gyou'+lng+'').on('click',function(){
+       $(this).parent().parent().remove();//削除ボタンをクリックしたら、自分（this）の親の親の（つまりtr階層から）削除
+
+       save(); //
+  });
+$('#inputprojects #task'+lng+'').on('click',function(){//tableの「個数」が入っているセルをclickしたときにおこるイベント
+       const elm = $(this).children ('textarea').length;//すでに個数セル（td）にtextareaがないかどうかの確認
+       if(elm != 0){
+           return
+     }
+//セル（td）の中にtextareaが入っていなければ以下の処理
+const init = $(this).text();//5.セル（td）の中の値を取得
+        $(this).html('<textarea id="tdtx'+lng+'">'+init+'</textarea>');//clickしたセル（td）の中に、もともとセル（td）に入っていた値（5の値）を入れた形でtextereaをhtmlソースで入れる
+        $('#tdtx'+lng+'').focus();//セル（td）をフォーカスするメソッド
+        $('#tdtx'+lng+'').select();//セル（td）をの中のテキストをフォーカスするメソッド
+        $('#tdtx'+lng+'').blur(function() {//セル（td）からフォーカスが外れた（フォーム外をclickした）時のメソッド　https://www.sejuku.net/blog/60644
+            const initlng = $('#inputprojects #tdtx'+lng+'').val();//セル（td）のtextareaに入っていた値を取得
+            $(this).remove(); //textereaを削除
+            $('#inputprojects #task'+lng+'').text(initlng); //セル（td）の中に、textereaから取得した値を入れる
+            console.log(initlng);
+        });
+    });
+});
+
+
+function save(){
+    //json として格納処理
+    const value = $('#taskbox').val;
+    var data = [];
+    var tableTrlength = $("#inputprojects tr");
+    for(var i=0;i<tableTrlength.length;i++){
+        var cells = tableTrlength.eq(i).children("th, td.itemp");//1行目から順番に列を取得(th、td)
+        data[i] = [];
+        for( var j=0,m=cells.length;j<m;j++ ){
+            data[i][j] = cells.eq(j).text();//i行目j列の文字列を取得
+        }
+    }
+    console.log(data);
+    //var grstatus = [0,1];
+    //localStorageに保存します。
+    localStorage.setItem(value, JSON.stringify(data));
+    //localstrageに保存する際のkeyをjsonにし、valueを上で作った配列データをjson化（文字列化）して保存。https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
+    // localStorage.setItem(value,responsible);
+}
+$("#save").on('click',save);
+// //ページリロード時の処理
+// //localStorageから取り出し
+
+function load() {
+    var data = JSON.parse(localStorage.getItem('json'));//jsonから配列化。https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse
+    console.log(data);
+    if(data == null){
+        return;//配列が空だったら処理を正常終了。localstrageに何も入っていないときに（初回表示）エラーになるので、こちらを記述。https://oshiete.goo.ne.jp/qa/2676665.html
+    }
+    var wak = "";//リロード時にlocalstrageから取ってきた値をtableにリスト表示させる宣言。空で宣言しておかなければならない事は何回目か忘れたのですが、講義で習った
+    for (let i = 0; i < data.length; i++) {　//6.繰り返し処理でtableの中のソースを生成
+        wak += "<tr>";
+        for (j = 0; j < data[i].length; j++) {
+            if(j == 0){
+                wak += '<th id="thname'+i+'">';
+                wak += data[i][j];
+                wak += '</th>';
+            }else{
+                wak += '<td id="task'+i+'" class="itemp">';
+                wak += data[i][j];
+                wak += '</td>';
+                wak += '<td><button id="gyou'+ i +'">削除</button></td>'
+            };
+        }
+        wak += "</tr>";
+    }
+    console.log(wak);
+    $("#inputprojects").append(wak);　//tableの中に6を追加
+    for (let i = 0; i < data.length; i++) { //ロードした際に6で追加されたデータをtableの行の分だけ回して「削除」ボタンにナンバーを付与
+        $('#inputprojects #gyou'+i+'').on('click', function(){  //削除ボタンのナンバーの行全体を削除の処理
+            const thname = $('#inputprojects #thname'+i+'').text();
+            console.log(thname);
+            $(this).parent().parent().remove();
+            save();
+        });
+    }
+    for (let i = 0; i < data.length; i++) {　//ここから先も、74行目あたりの処理と同じ処理の、ロード時番の処理
+        $('#inputprojects #task'+i+'').on('click', function(){
+            const init = $('#inputprojects #task'+i+'').text();
+            console.log("init" + init);
+            const elm = $(this).children('textarea').length;
+            if(elm != 0){
+                return;
+            }
+            $(this).html('<textarea id="tdtx'+i+'">'+init+'</textarea>');
+            $('#tdtx'+i+'').focus();
+            $('#tdtx'+i+'').select();
+            $('#tdtx'+i+'').blur(function() {
+                const initlng = $('#inputprojects #tdtx'+i+'').val();
+                console.log(this);
+                $(this).remove();
+                console.log('#inputprojects #task'+i+'');
+                console.log($('#inputprojects #task'+i+''));
+                $('#inputprojects #task'+i+'').text(initlng);
+            });
+        });
+    }
+}
+load();
+
+$("#clear").on("click",function(){
+    localStorage.clear();
+    $("#inputprojects").empty();
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+</body>
+</html>
